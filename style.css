@@ -26,9 +26,21 @@ body {
   display: flex;
   justify-content: space-around;
   padding: 10px;
+  gap: 10px;
 }
-.controls img{
+.controls *{
   cursor: pointer;
+}
+#speed-control{
+  background: #333;
+  width: 40px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: sans-serif;
+  color: #cecece;
+  font-weight: bold;
 }
 .wrapper{
   padding: 20px;

@@ -11,7 +11,7 @@ const WIDTH = {
 };
 
 const BOX_SIZE = 40; // 1 box is of 10 px length and width
-const SPEED = 1;
+let SPEED = 1;
 
 const game = document.getElementById("game");
 const ctx = game.getContext("2d");
@@ -59,6 +59,11 @@ const COLORS = [
   "#35DDEB", // Cyan
 ];
 
+const GAME_BOARD = Array.from({ length: HEIGHT.game }, () => 
+  new Array(WIDTH.game).fill(-1)
+);
+// making it -1 by default cause 0 to 6 are for colors occupying that particular box
+
 const DIMENSIONS = [
   [3, 2],
   [1, 4],
@@ -77,18 +82,28 @@ BG_MUSIC.volume = 0.02;
 BG_MUSIC.loop = true;
 
 const soundControl = document.getElementById("sound-control");
+const speedControl = document.getElementById("speed-control");
+
+function speedHandler(e){
+    SPEED = (SPEED* 2)%4096;
+    if (SPEED==0){
+        SPEED = 1;
+    }
+    FPS_INTERVAL = 1000 / (FPS * SPEED);
+}
 
 function bgMusicHandler(e) {
-    if (BG_MUSIC.paused || BG_MUSIC.ended || BG_MUSIC.readyState <= 2) {
-        BG_MUSIC.play();
-        soundControl.src = "assets/images/volume-on.png"
-    }
-    else{
-        BG_MUSIC.pause();
-        soundControl.src = "assets/images/volume-off.png"
-    }
+  if (BG_MUSIC.paused || BG_MUSIC.ended || BG_MUSIC.readyState <= 2) {
+    BG_MUSIC.play();
+    soundControl.src = "assets/images/volume-on.png";
+  } else {
+    BG_MUSIC.pause();
+    soundControl.src = "assets/images/volume-off.png";
+  }
 }
 soundControl.addEventListener("mousedown", bgMusicHandler);
+speedControl.addEventListener("mousedown", speedHandler);
+
 
 class Block {
   constructor(blockType) {
@@ -98,10 +113,10 @@ class Block {
     }
     this.type = BlockType[blockType];
     this.blocks = Blocks[blockType];
-    console.log("got ", blockType);
     this.color = COLORS[blockType];
     this.locked = false;
     this.dimensions = DIMENSIONS[blockType];
+    this.number = blockType;
     this.pos = {
       x: Math.floor((WIDTH.game - this.dimensions[0]) / 2),
       y: -this.dimensions[1],
@@ -111,14 +126,12 @@ class Block {
   drawBlock(ctx, preview = false) {
     for (const i of this.blocks) {
       drawBox(
-        (!preview * this.pos.x +
+        !preview * this.pos.x +
           Math.floor(i % 4) +
-          ((WIDTH.previewWindow - this.dimensions[0]) * preview) / 2) *
-          BOX_SIZE,
-        (!preview * this.pos.y +
+          ((WIDTH.previewWindow - this.dimensions[0]) * preview) / 2,
+        !preview * this.pos.y +
           Math.floor(i / 4) +
-          ((HEIGHT.previewWindow - this.dimensions[1]) * preview) / 2) *
-          BOX_SIZE,
+          ((HEIGHT.previewWindow - this.dimensions[1]) * preview) / 2,
         this.color,
         ctx,
       );
@@ -141,7 +154,8 @@ class Block {
         }
         this.pos.y += 1;
         if (this.pos.y + this.dimensions[1] >= HEIGHT.game) {
-          this.locked = true;
+          // when this get locked, we will add it to game state
+          this.addToBoard();
         }
         break;
       case 4:
@@ -151,9 +165,16 @@ class Block {
         break;
     }
   }
+  addToBoard() {
+    this.locked = true;
+    for (const i of this.blocks) {
+      // we will use i along with its position and put it in the game board
+      GAME_BOARD[this.pos.y + Math.floor(i / 4)][this.pos.x + (i % 4)] =
+        this.number;
+      // added
+    }
+  }
 }
-
-const gameState = new Array(WIDTH.game).fill(new Array(HEIGHT.game).fill(0));
 
 function setupCanvas() {
   game.width = WIDTH.game * BOX_SIZE;
@@ -170,6 +191,8 @@ function setupCanvas() {
 }
 
 function drawBox(x, y, baseColor, ctx) {
+  x = x * BOX_SIZE;
+  y = y * BOX_SIZE;
   // 1. Draw the main solid base structure
   let size = BOX_SIZE;
   ctx.fillStyle = baseColor;
@@ -207,8 +230,20 @@ function drawBox(x, y, baseColor, ctx) {
 function draw() {
   ctx.reset();
   previewCtx.reset();
+  drawBoard();
   HOLDING_BLOCK.drawBlock(ctx);
   NEXT_BLOCK.drawBlock(previewCtx, true);
+}
+
+function drawBoard() {
+  // we need to draw the board
+  for (let row = 0; row < HEIGHT.game; row++) {
+    for (let col = 0; col < WIDTH.game; col++) {
+      let value = GAME_BOARD[row][col];
+      if (value == -1) continue;
+      drawBox(col, row, COLORS[value], ctx);
+    }
+  }
 }
 
 let HOLDING_BLOCK;
@@ -236,7 +271,7 @@ function update(movement_direction = 3, isDefault = true) {
 
 let lastTime = 0;
 const FPS = 2;
-const FPS_INTERVAL = 1000 / (FPS * SPEED);
+let FPS_INTERVAL = 1000 / (FPS * SPEED);
 
 function gameLoop(currentTime) {
   // this will decide what happens in the next frame
