@@ -1,0 +1,32 @@
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  background: #222;
+  color: white;
+  font-family: monospace;
+}
+
+.game-box{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+.game-score-box{
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items:center;
+  gap: 10px;
+}
+
+.wrapper{
+  padding: 20px;
+  background: #333;
+}
+.game-wrapper{
+  padding: 0;
+}
