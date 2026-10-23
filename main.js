@@ -10,6 +10,9 @@ const WIDTH = {
   scoreWindow: 4,
 };
 
+let SCORE = 0;
+let MAX_SCORE = 0;
+
 const BOX_SIZE = 40; // 1 box is of 10 px length and width
 let SPEED = 1;
 
@@ -20,6 +23,9 @@ const scoreWindow = document.getElementById("score-window");
 const previewCtx = previewWindow.getContext("2d");
 
 const scoreDiv = document.getElementsByClassName("game-score-box")[0];
+const GAME_OVER_SOUND = new Audio("assets/sounds/game-over.mp3")
+
+let IS_GAME_OVER = false;
 
 const TBlock = [0, 1, 2, 5];
 const IBlock = [0, 4, 8, 12];
@@ -145,6 +151,13 @@ class Block {
     // if any of our stuff collides in the direction we wanna move,
     // we will say back off not just the corners
     switch (direction) {
+      case 1:
+        // basically we will fall at once
+        SCORE++;
+        while (true) {
+          if (this.move(3) == -1) break;
+        }
+        break;
       case 2:
         if (this.checkCollision({ x: this.pos.x + 1, y: this.pos.y })) break;
         MOVE_SOUND.play();
@@ -152,7 +165,14 @@ class Block {
         break;
       case 3:
         if (this.checkCollision({ x: this.pos.x, y: this.pos.y + 1 })) {
+          // one more thing, we need to check
+          // if its starting position is less than 0 in y
+          // it means an game over
           this.addToBoard();
+          if (this.pos.y < 0) {
+            gameOver();
+          }
+          return -1;
           break;
         }
         if (!isDefault) {
@@ -166,6 +186,7 @@ class Block {
         this.pos.x -= 1;
         break;
     }
+    return 1;
   }
   checkCollision(pos) {
     // they will give us an position
@@ -191,8 +212,10 @@ class Block {
     this.locked = true;
     for (const i of this.blocks) {
       // we will use i along with its position and put it in the game board
-      GAME_BOARD[this.pos.y + Math.floor(i / 4)][this.pos.x + (i % 4)] =
-        this.number;
+      let y = this.pos.y + Math.floor(i / 4);
+      let x = this.pos.x + (i % 4);
+      if (y < 0) continue;
+      GAME_BOARD[y][x] = this.number;
       // added
     }
   }
@@ -206,8 +229,8 @@ function setupCanvas() {
   previewWindow.width = WIDTH.previewWindow * BOX_SIZE;
   previewWindow.height = HEIGHT.previewWindow * BOX_SIZE;
 
-  scoreWindow.width = WIDTH.scoreWindow * BOX_SIZE;
-  scoreWindow.height = HEIGHT.scoreWindow * BOX_SIZE;
+  scoreWindow.style.width = `${WIDTH.scoreWindow * BOX_SIZE}px`;
+  scoreWindow.style.height = `${HEIGHT.scoreWindow * BOX_SIZE}px`;
 
   scoreDiv.style.height = `${HEIGHT.game * BOX_SIZE}px`;
 }
@@ -253,6 +276,7 @@ function draw() {
   ctx.reset();
   previewCtx.reset();
   drawBoard();
+  drawScore();
   HOLDING_BLOCK.drawBlock(ctx);
   NEXT_BLOCK.drawBlock(previewCtx, true);
 }
@@ -268,6 +292,11 @@ function drawBoard() {
   }
 }
 
+function drawScore() {
+  let score = SCORE;
+  scoreWindow.innerText = score;
+}
+
 let HOLDING_BLOCK;
 let NEXT_BLOCK;
 
@@ -277,6 +306,7 @@ function setupBlocks() {
 }
 
 function initGame() {
+  HOLDING_BLOCK = null;
   NEXT_BLOCK = new Block();
   setupCanvas();
   setupBlocks();
@@ -291,6 +321,15 @@ function update(movement_direction = 3, isDefault = true) {
   }
 }
 
+function gameOver() {
+  console.log("Game Over");
+  HOLDING_BLOCK = null;
+  NEXT_BLOCK = null;
+  IS_GAME_OVER = true;
+  GAME_OVER_SOUND.play()
+  draw();
+}
+
 let lastTime = 0;
 const FPS = 2;
 let FPS_INTERVAL = 1000 / (FPS * SPEED);
@@ -298,6 +337,7 @@ let FPS_INTERVAL = 1000 / (FPS * SPEED);
 function gameLoop(currentTime) {
   // this will decide what happens in the next frame
   // it can be game over, it can
+  if (IS_GAME_OVER) return;
   draw();
   const DELTA = currentTime - lastTime;
   if (DELTA >= FPS_INTERVAL) {
@@ -310,6 +350,9 @@ function gameLoop(currentTime) {
 
 function handleInput(e) {
   switch (e.key) {
+    case "ArrowUp":
+      update(1);
+      break;
     case "ArrowRight":
       update(2);
       break;
