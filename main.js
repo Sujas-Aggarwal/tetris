@@ -68,30 +68,41 @@ class Block {
     this.type = BlockType[blockType];
     this.blocks = Blocks[blockType];
     console.log("got ", blockType);
-    this.pos = [3, -2]; // x and y
+    this.pos = {x:3,y: -2}; // x and y
     this.color = COLORS[blockType];
     if (blockType == 1) {
       // special for I
-      this.pos[1] = -3;
+      this.pos.y = -3;
     }
   }
   // now we will draw it
   drawBlock(ctx, preview = false) {
     for (const i of this.blocks) {
       drawBox(
-        (!preview * this.pos[0] + Math.floor(i % 4)) * BOX_SIZE,
-        (!preview * this.pos[1] + Math.floor(i / 4)) * BOX_SIZE,
+        (!preview * this.pos.x + Math.floor(i % 4)) * BOX_SIZE,
+        (!preview * this.pos.y + Math.floor(i / 4)) * BOX_SIZE,
         this.color,
         ctx,
       );
     }
   }
 
-  moveDown() {
-    this.blocks.forEach((num, index) => {
-      this.blocks[index] = num + 4;
-    });
-    console.log(this.blocks);
+  move(direction = 1) {
+    //direction -> 1 is for top and 4 is for left, making it clockwise
+    switch (direction) {
+      case 1:
+        this.pos.y +=  1;
+        break;
+      case 2:
+        this.pos.x +=  1;
+        break;
+      case 3:
+        this.pos.y -=  1;
+        break;
+      default:
+        this.pos.x -=  1;
+        break;
+    }
   }
 }
 
@@ -168,8 +179,7 @@ function initGame() {
 
 function update() {
   console.log("state updated");
-  HOLDING_BLOCK.moveDown();
-  draw();
+  HOLDING_BLOCK.move(1);
 }
 
 let lastTime = 0;
@@ -183,6 +193,7 @@ function gameLoop(currentTime) {
   if (DELTA >= FPS_INTERVAL) {
     // Adjust lastTime to account for the current interval overflow
     lastTime = currentTime - (DELTA % FPS_INTERVAL);
+    draw()
     update();
   }
   requestAnimationFrame(gameLoop);
