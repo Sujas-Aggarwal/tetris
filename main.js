@@ -11,19 +11,23 @@ const WIDTH = {
 };
 
 const BOX_SIZE = 40; // 1 box is of 10 px length and width
+const SPEED = 1;
 
 const game = document.getElementById("game");
 const ctx = game.getContext("2d");
 const previewWindow = document.getElementById("preview-window");
 const scoreWindow = document.getElementById("score-window");
+const previewCtx = previewWindow.getContext("2d");
 
 const scoreDiv = document.getElementsByClassName("game-score-box")[0];
 
-const TBlock = [0,1,2,5,9];
-const IBlock = [1,5,9,13];
-const ZBlock = [5,6,10,11];
-const SBlock = [5,6,9,10];
-const IZBlock = [6,7,10,9];
+const TBlock = [0, 1, 2, 5, 9];
+const IBlock = [1, 5, 9, 13];
+const ZBlock = [5, 6, 10, 11];
+const SBlock = [5, 6, 9, 10];
+const IZBlock = [6, 7, 10, 9];
+const LBlock = [2, 6, 10, 11];
+const ILBlock = [2, 6, 10, 9];
 
 const Blocks = {
   0: TBlock,
@@ -31,6 +35,8 @@ const Blocks = {
   2: ZBlock,
   3: SBlock,
   4: IZBlock,
+  5: LBlock,
+  6: ILBlock,
 };
 
 const BlockType = {
@@ -39,7 +45,19 @@ const BlockType = {
   2: "ZBlock",
   3: "SBlock",
   4: "IZBlock",
+  5: "LBlock",
+  6: "ILBlock",
 };
+
+const COLORS = [
+  "#FF4D6D", // Red / Coral
+  "#4D79FF", // Blue
+  "#35D07F", // Green
+  "#FFD84D", // Yellow
+  "#FF9F43", // Orange
+  "#D66BFF", // Pink / Purple
+  "#35DDEB", // Cyan
+];
 
 class Block {
   constructor(blockType) {
@@ -49,23 +67,37 @@ class Block {
     }
     this.type = BlockType[blockType];
     this.blocks = Blocks[blockType];
-    console.log("got ",blockType)
+    console.log("got ", blockType);
+    this.pos = [3, -2]; // x and y
+    this.color = COLORS[blockType];
+    if (blockType == 1) {
+      // special for I
+      this.pos[1] = -3;
+    }
   }
   // now we will draw it
-  draw(ctx) {
-    // we will use our blocks to draw it as easy as that
-    ctx.fillStyle = "red";
-    // ctx.fillRect(0, 0, BOX_SIZE, BOX_SIZE);
-    // ctx.fillRect(50, 0, BOX_SIZE, BOX_SIZE);
-    for (const i of this.blocks){
-        ctx.fillRect(Math.floor(i%4)*BOX_SIZE,Math.floor(i/4)*BOX_SIZE,BOX_SIZE, BOX_SIZE);
+  drawBlock(ctx, preview = false) {
+    for (const i of this.blocks) {
+      drawBox(
+        (!preview * this.pos[0] + Math.floor(i % 4)) * BOX_SIZE,
+        (!preview * this.pos[1] + Math.floor(i / 4)) * BOX_SIZE,
+        this.color,
+        ctx,
+      );
     }
+  }
+
+  moveDown() {
+    this.blocks.forEach((num, index) => {
+      this.blocks[index] = num + 4;
+    });
+    console.log(this.blocks);
   }
 }
 
 const gameState = new Array(WIDTH.game).fill(new Array(HEIGHT.game).fill(0));
 
-function setupGame() {
+function setupCanvas() {
   game.width = WIDTH.game * BOX_SIZE;
   game.height = HEIGHT.game * BOX_SIZE;
   game.style.imageRendering = "pixelated";
@@ -73,21 +105,87 @@ function setupGame() {
   previewWindow.width = WIDTH.previewWindow * BOX_SIZE;
   previewWindow.height = HEIGHT.previewWindow * BOX_SIZE;
 
-
   scoreWindow.width = WIDTH.scoreWindow * BOX_SIZE;
   scoreWindow.height = HEIGHT.scoreWindow * BOX_SIZE;
-
 
   scoreDiv.style.height = `${HEIGHT.game * BOX_SIZE}px`;
 }
 
-function draw() {
-    let newBlock = new Block()
-    newBlock.draw(ctx)
-    newBlock.draw(previewWindow.getContext("2d"))
+function drawBox(x, y, baseColor, ctx) {
+  // 1. Draw the main solid base structure
+  let size = BOX_SIZE;
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(x, y, size, size);
+
+  // 2. Add an Inner Glow / 3D Bevel effect using gradients
+  // Light Source coming from Top-Left: Create highlights
+  let highlight = ctx.createLinearGradient(x, y, x + size, y + size);
+  highlight.addColorStop(0.5, "rgba(0, 0, 0, 0)"); // Neutral middle
+  highlight.addColorStop(0.7, "rgba(0, 0, 0, 0.2)");
+  highlight.addColorStop(1, "rgba(0, 0, 0, 0.5)"); // Dark bottom-right corner
+
+  ctx.fillStyle = highlight;
+  ctx.fillRect(x, y, size, size);
+
+  // 3. Draw Bevel Borders (Classic Game Boy / Arcade Frame)
+  const inset = size * 0.3; // 12% border width looks ideal
+  ctx.lineWidth = inset;
+
+  // 4. Draw the Inner Core Accent Square
+  ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+  ctx.fillRect(
+    x + inset * 1.5,
+    y + inset * 1.5,
+    size - inset * 3,
+    size - inset * 3,
+  );
+
+  // 5. Crisp Outer Frame Border to separate blocks in a tetromino
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, size, size);
 }
 
-function initGame() {}
+function draw() {
+  ctx.reset();
+  HOLDING_BLOCK.drawBlock(ctx);
+  NEXT_BLOCK.drawBlock(previewCtx, true);
+}
 
-setupGame();
-draw();
+let HOLDING_BLOCK;
+let NEXT_BLOCK;
+
+function setupBlocks() {
+  HOLDING_BLOCK = new Block();
+  NEXT_BLOCK = new Block();
+}
+
+function initGame() {
+  setupCanvas();
+  setupBlocks();
+  gameLoop();
+}
+
+function update() {
+  console.log("state updated");
+  HOLDING_BLOCK.moveDown();
+  draw();
+}
+
+let lastTime = 0;
+const FPS = 2;
+const FPS_INTERVAL = 1000 / (FPS * SPEED);
+
+function gameLoop(currentTime) {
+  // this will decide what happens in the next frame
+  // it can be game over, it can
+  const DELTA = currentTime - lastTime;
+  if (DELTA >= FPS_INTERVAL) {
+    // Adjust lastTime to account for the current interval overflow
+    lastTime = currentTime - (DELTA % FPS_INTERVAL);
+    update();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+initGame();
