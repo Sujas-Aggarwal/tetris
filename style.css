@@ -19,10 +19,17 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  align-items:center;
+  align-items:flex-start;
   gap: 10px;
 }
-
+.controls{
+  display: flex;
+  justify-content: space-around;
+  padding: 10px;
+}
+.controls img{
+  cursor: pointer;
+}
 .wrapper{
   padding: 20px;
   background: #333;

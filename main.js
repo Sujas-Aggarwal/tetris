@@ -72,6 +72,24 @@ const DIMENSIONS = [
 const MOVE_SOUND = new Audio("assets/sounds/move.wav");
 MOVE_SOUND.volume = 0.2;
 
+const BG_MUSIC = new Audio("assets/sounds/bg.mp3");
+BG_MUSIC.volume = 0.02;
+BG_MUSIC.loop = true;
+
+const soundControl = document.getElementById("sound-control");
+
+function bgMusicHandler(e) {
+    if (BG_MUSIC.paused || BG_MUSIC.ended || BG_MUSIC.readyState <= 2) {
+        BG_MUSIC.play();
+        soundControl.src = "assets/images/volume-on.png"
+    }
+    else{
+        BG_MUSIC.pause();
+        soundControl.src = "assets/images/volume-off.png"
+    }
+}
+soundControl.addEventListener("mousedown", bgMusicHandler);
+
 class Block {
   constructor(blockType) {
     if (!blockType) {
@@ -239,7 +257,7 @@ function handleInput(e) {
       update(2);
       break;
     case "ArrowDown":
-      update(3,false);
+      update(3, false);
       break;
     case "ArrowLeft":
       update(4);
