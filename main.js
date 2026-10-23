@@ -69,6 +69,9 @@ const DIMENSIONS = [
   [2, 3],
 ]; //width and height
 
+const MOVE_SOUND = new Audio("assets/sounds/move.wav");
+MOVE_SOUND.volume = 0.2;
+
 class Block {
   constructor(blockType) {
     if (!blockType) {
@@ -90,24 +93,34 @@ class Block {
   drawBlock(ctx, preview = false) {
     for (const i of this.blocks) {
       drawBox(
-        (!preview * this.pos.x + Math.floor(i % 4)+ (WIDTH.previewWindow-this.dimensions[0])*preview/2) * BOX_SIZE,
-        (!preview * this.pos.y + Math.floor(i / 4)+ (HEIGHT.previewWindow-this.dimensions[1])*preview/2) * BOX_SIZE,
+        (!preview * this.pos.x +
+          Math.floor(i % 4) +
+          ((WIDTH.previewWindow - this.dimensions[0]) * preview) / 2) *
+          BOX_SIZE,
+        (!preview * this.pos.y +
+          Math.floor(i / 4) +
+          ((HEIGHT.previewWindow - this.dimensions[1]) * preview) / 2) *
+          BOX_SIZE,
         this.color,
         ctx,
       );
     }
   }
 
-  move(direction = 1) {
+  move(direction = 3, isDefault = false) {
     if (this.locked) return;
     //direction -> 1 is for top and 4 is for left, making it clockwise
     switch (direction) {
       case 2:
         if (this.pos.x + this.dimensions[0] >= WIDTH.game) break;
+        MOVE_SOUND.play();
         this.pos.x += 1;
         break;
       case 3:
         if (this.pos.y + this.dimensions[1] >= HEIGHT.game) break;
+        if (!isDefault) {
+          MOVE_SOUND.play();
+        }
         this.pos.y += 1;
         if (this.pos.y + this.dimensions[1] >= HEIGHT.game) {
           this.locked = true;
@@ -115,6 +128,7 @@ class Block {
         break;
       case 4:
         if (this.pos.x <= 0) break;
+        MOVE_SOUND.play();
         this.pos.x -= 1;
         break;
     }
@@ -194,12 +208,12 @@ function initGame() {
   gameLoop();
 }
 
-function update(movement_direction = 3) {
-  HOLDING_BLOCK.move(movement_direction);
+function update(movement_direction = 3, isDefault = true) {
+  HOLDING_BLOCK.move(movement_direction, isDefault);
   // we need to check if locked
-  if (HOLDING_BLOCK.locked){
+  if (HOLDING_BLOCK.locked) {
     setupBlocks();
-  };
+  }
 }
 
 let lastTime = 0;
@@ -225,7 +239,7 @@ function handleInput(e) {
       update(2);
       break;
     case "ArrowDown":
-      update(3);
+      update(3,false);
       break;
     case "ArrowLeft":
       update(4);
