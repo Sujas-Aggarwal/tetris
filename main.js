@@ -59,8 +59,8 @@ const COLORS = [
   "#35DDEB", // Cyan
 ];
 
-const GAME_BOARD = Array.from({ length: HEIGHT.game }, () => 
-  new Array(WIDTH.game).fill(-1)
+const GAME_BOARD = Array.from({ length: HEIGHT.game }, () =>
+  new Array(WIDTH.game).fill(-1),
 );
 // making it -1 by default cause 0 to 6 are for colors occupying that particular box
 
@@ -84,12 +84,12 @@ BG_MUSIC.loop = true;
 const soundControl = document.getElementById("sound-control");
 const speedControl = document.getElementById("speed-control");
 
-function speedHandler(e){
-    SPEED = (SPEED* 2)%4096;
-    if (SPEED==0){
-        SPEED = 1;
-    }
-    FPS_INTERVAL = 1000 / (FPS * SPEED);
+function speedHandler(e) {
+  SPEED = (SPEED * 2) % 4096;
+  if (SPEED == 0) {
+    SPEED = 1;
+  }
+  FPS_INTERVAL = 1000 / (FPS * SPEED);
 }
 
 function bgMusicHandler(e) {
@@ -103,7 +103,6 @@ function bgMusicHandler(e) {
 }
 soundControl.addEventListener("mousedown", bgMusicHandler);
 speedControl.addEventListener("mousedown", speedHandler);
-
 
 class Block {
   constructor(blockType) {
@@ -141,29 +140,52 @@ class Block {
   move(direction = 3, isDefault = false) {
     if (this.locked) return;
     //direction -> 1 is for top and 4 is for left, making it clockwise
+
+    // so now we need to add collision detection in our stuff
+    // if any of our stuff collides in the direction we wanna move,
+    // we will say back off not just the corners
     switch (direction) {
       case 2:
-        if (this.pos.x + this.dimensions[0] >= WIDTH.game) break;
+        if (this.checkCollision({ x: this.pos.x + 1, y: this.pos.y })) break;
         MOVE_SOUND.play();
         this.pos.x += 1;
         break;
       case 3:
-        if (this.pos.y + this.dimensions[1] >= HEIGHT.game) break;
+        if (this.checkCollision({ x: this.pos.x, y: this.pos.y + 1 })) {
+          this.addToBoard();
+          break;
+        }
         if (!isDefault) {
           MOVE_SOUND.play();
         }
         this.pos.y += 1;
-        if (this.pos.y + this.dimensions[1] >= HEIGHT.game) {
-          // when this get locked, we will add it to game state
-          this.addToBoard();
-        }
         break;
       case 4:
-        if (this.pos.x <= 0) break;
+        if (this.checkCollision({ x: this.pos.x - 1, y: this.pos.y })) break;
         MOVE_SOUND.play();
         this.pos.x -= 1;
         break;
     }
+  }
+  checkCollision(pos) {
+    // they will give us an position
+    // if we either cross the boundary
+    // or we cross any pre occupied block, we will return true
+    // which means, there is collision
+    // pos is pos.x and pos.yc
+    if (
+      pos.x < 0 ||
+      pos.x + this.dimensions[0] > WIDTH.game ||
+      pos.y + this.dimensions[1] > HEIGHT.game
+    )
+      return true;
+    for (const i of this.blocks) {
+      let y = pos.y + Math.floor(i / 4);
+      let x = pos.x + (i % 4);
+      if (y < 0) continue;
+      if (GAME_BOARD[y][x] != -1) return true;
+    }
+    return false;
   }
   addToBoard() {
     this.locked = true;
