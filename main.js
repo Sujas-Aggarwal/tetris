@@ -23,6 +23,15 @@ const ctx = game.getContext("2d");
 const previewWindow = document.getElementById("preview-window");
 const scoreWindow = document.getElementById("score-window");
 const previewCtx = previewWindow.getContext("2d");
+const mutliplayerBtn = document.getElementById("multiplayer-button");
+
+function handleMultiplayer(e) {
+  const currentUrl = new URL(window.location.href);
+  let randomString = Math.floor(Math.random()*1000)
+  currentUrl.searchParams.set("room", randomString);
+  window.location.href = currentUrl.toString();
+}
+mutliplayerBtn.addEventListener("mousedown", handleMultiplayer);
 
 const scoreDiv = document.getElementsByClassName("game-score-box")[0];
 
@@ -99,7 +108,7 @@ const speedControl = document.getElementById("speed-control");
 
 function speedHandler(e, auto = false) {
   if (auto) {
-    SPEED *=  1.0 + (0.5 / (1.0 + (SPEED / 30)));
+    SPEED *= 1.0 + 0.5 / (1.0 + SPEED / 30);
   } else {
     SPEED = SPEED * 2;
     if (SPEED > 4000) {
@@ -122,11 +131,48 @@ function bgMusicHandler(e) {
 soundControl.addEventListener("mousedown", bgMusicHandler);
 speedControl.addEventListener("mousedown", speedHandler);
 
+const queryString = window.location.search;
+
+// 2. Parse the query string
+const urlParams = new URLSearchParams(queryString);
+
+// 3. Get specific parameters
+let roomId = urlParams.get("room");
+console.log(roomId);
+try {
+  if (roomId) {
+    // we will add the values of the chars
+    let val = 0;
+    for (let i of roomId) {
+      val += i.charCodeAt(0);
+    }
+    roomId = val;
+    console.log(roomId);
+  }
+} catch {
+  roomId = 0;
+}
+
+function mulberry32(a = 10000) {
+  return function () {
+    if (a == 0 || a == null || a == NaN) {
+      a = Math.floor(Math.random() * 1000000);
+    }
+    let t = (a += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// 1. Initialize with a seed value
+const random = mulberry32(roomId);
+
 class Block {
   constructor(blockType) {
     if (!blockType) {
       // we will get a random one
-      blockType = Math.floor(Math.random() * 7); // will be 0 to 6
+      blockType = Math.floor(random() * 7); // will be 0 to 6
     }
     this.type = BlockType[blockType];
     this.blocks = Blocks[blockType];
@@ -384,7 +430,7 @@ function initGame() {
   gameLoop();
 }
 
-let LAST_SCORE_THRESHOLD = 1
+let LAST_SCORE_THRESHOLD = 1;
 function update(movement_direction = 3, isDefault = true) {
   HOLDING_BLOCK.move(movement_direction, isDefault);
   // we need to check if locked
@@ -393,9 +439,9 @@ function update(movement_direction = 3, isDefault = true) {
   }
   // we also need to check the state of our
   clearLines();
-  if (SCORE>=LAST_SCORE_THRESHOLD*10){
-    LAST_SCORE_THRESHOLD = SCORE
-    speedHandler(null, true)
+  if (SCORE >= LAST_SCORE_THRESHOLD * 10) {
+    LAST_SCORE_THRESHOLD = SCORE;
+    speedHandler(null, true);
   }
 }
 

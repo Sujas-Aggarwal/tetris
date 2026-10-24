@@ -58,3 +58,15 @@ body {
   font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
   font-size: bold;
 }
+
+#multiplayer-button{
+  background: none;
+  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  border: 2px rgb(208, 208, 208) solid;
+  color: rgb(197, 197, 197);
+  font-weight: bold;
+}
+#multiplayer-button:active{
+  background: white;
+  color: rgb(255, 167, 58);
+}
