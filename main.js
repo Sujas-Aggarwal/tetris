@@ -126,7 +126,7 @@ class Block {
   constructor(blockType) {
     if (!blockType) {
       // we will get a random one
-      blockType = Math.floor(Math.random() * 5); // will be 0 to 4
+      blockType = Math.floor(Math.random() * 7); // will be 0 to 6
     }
     this.type = BlockType[blockType];
     this.blocks = Blocks[blockType];
