@@ -101,8 +101,8 @@ function speedHandler(e, auto = false) {
   if (auto) {
     SPEED *=  1.0 + (0.5 / (1.0 + (SPEED / 30)));
   } else {
-    SPEED = (SPEED * 2) % 4096;
-    if (SPEED == 0) {
+    SPEED = SPEED * 2;
+    if (SPEED > 4000) {
       SPEED = 1;
     }
   }
