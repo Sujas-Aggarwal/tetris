@@ -97,11 +97,16 @@ GAME_OVER_SOUND.volume = 0.6;
 const soundControl = document.getElementById("sound-control");
 const speedControl = document.getElementById("speed-control");
 
-function speedHandler(e) {
-  SPEED = (SPEED * 2) % 4096;
-  if (SPEED == 0) {
-    SPEED = 1;
+function speedHandler(e, auto = false) {
+  if (auto) {
+    SPEED *=  1.0 + (0.5 / (1.0 + (SPEED / 30)));
+  } else {
+    SPEED = (SPEED * 2) % 4096;
+    if (SPEED == 0) {
+      SPEED = 1;
+    }
   }
+
   FPS_INTERVAL = 1000 / (FPS * SPEED);
 }
 
@@ -166,17 +171,12 @@ class Block {
         }
         break;
       case 2:
-        if (
-          this.checkCollision({ x: this.pos.x + 1, y: this.pos.y })
-        )
-          break;
+        if (this.checkCollision({ x: this.pos.x + 1, y: this.pos.y })) break;
         MOVE_SOUND.play();
         this.pos.x += 1;
         break;
       case 3:
-        if (
-          this.checkCollision({ x: this.pos.x, y: this.pos.y + 1 })
-        ) {
+        if (this.checkCollision({ x: this.pos.x, y: this.pos.y + 1 })) {
           // one more thing, we need to check
           // if its starting position is less than 0 in y
           // it means an game over
@@ -192,10 +192,7 @@ class Block {
         this.pos.y += 1;
         break;
       case 4:
-        if (
-          this.checkCollision({ x: this.pos.x - 1, y: this.pos.y })
-        )
-          break;
+        if (this.checkCollision({ x: this.pos.x - 1, y: this.pos.y })) break;
         MOVE_SOUND.play();
         this.pos.x -= 1;
         break;
@@ -286,11 +283,11 @@ class Block {
     }
     // now we got our indices, let's check if it collides or not
     // we need to also inverse the dimensions now
-    let newDimensions = [this.dimensions[1],this.dimensions[0]]
+    let newDimensions = [this.dimensions[1], this.dimensions[0]];
     if (!this.checkCollision(this.pos, newBlocks, newDimensions)) {
       MOVE_SOUND.play();
       this.blocks = newBlocks;
-      this.dimensions = newDimensions
+      this.dimensions = newDimensions;
     }
   }
 }
@@ -387,6 +384,7 @@ function initGame() {
   gameLoop();
 }
 
+let LAST_SCORE_THRESHOLD = 1
 function update(movement_direction = 3, isDefault = true) {
   HOLDING_BLOCK.move(movement_direction, isDefault);
   // we need to check if locked
@@ -395,6 +393,10 @@ function update(movement_direction = 3, isDefault = true) {
   }
   // we also need to check the state of our
   clearLines();
+  if (SCORE>=LAST_SCORE_THRESHOLD*10){
+    LAST_SCORE_THRESHOLD = SCORE
+    speedHandler(null, true)
+  }
 }
 
 function clearLines() {
