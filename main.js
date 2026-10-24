@@ -13,6 +13,8 @@ const WIDTH = {
 let SCORE = 0;
 let MAX_SCORE = 0;
 
+const IMAGINARY_MATRIX = 4;
+
 const BOX_SIZE = 40; // 1 box is of 10 px length and width
 let SPEED = 1;
 
@@ -26,6 +28,7 @@ const scoreDiv = document.getElementsByClassName("game-score-box")[0];
 
 let IS_GAME_OVER = false;
 
+// these are given indices using Imaginary matrix with m x n as 4 x 4
 const TBlock = [0, 1, 2, 5];
 const IBlock = [0, 4, 8, 12];
 const ZBlock = [0, 1, 5, 6];
@@ -136,10 +139,10 @@ class Block {
     for (const i of this.blocks) {
       drawBox(
         !preview * this.pos.x +
-          Math.floor(i % 4) +
+          Math.floor(i % IMAGINARY_MATRIX) +
           ((WIDTH.previewWindow - this.dimensions[0]) * preview) / 2,
         !preview * this.pos.y +
-          Math.floor(i / 4) +
+          Math.floor(i / IMAGINARY_MATRIX) +
           ((HEIGHT.previewWindow - this.dimensions[1]) * preview) / 2,
         this.color,
         ctx,
@@ -163,12 +166,17 @@ class Block {
         }
         break;
       case 2:
-        if (this.checkCollision({ x: this.pos.x + 1, y: this.pos.y })) break;
+        if (
+          this.checkCollision({ x: this.pos.x + 1, y: this.pos.y })
+        )
+          break;
         MOVE_SOUND.play();
         this.pos.x += 1;
         break;
       case 3:
-        if (this.checkCollision({ x: this.pos.x, y: this.pos.y + 1 })) {
+        if (
+          this.checkCollision({ x: this.pos.x, y: this.pos.y + 1 })
+        ) {
           // one more thing, we need to check
           // if its starting position is less than 0 in y
           // it means an game over
@@ -177,7 +185,6 @@ class Block {
             gameOver();
           }
           return -1;
-          break;
         }
         if (!isDefault) {
           MOVE_SOUND.play();
@@ -185,14 +192,20 @@ class Block {
         this.pos.y += 1;
         break;
       case 4:
-        if (this.checkCollision({ x: this.pos.x - 1, y: this.pos.y })) break;
+        if (
+          this.checkCollision({ x: this.pos.x - 1, y: this.pos.y })
+        )
+          break;
         MOVE_SOUND.play();
         this.pos.x -= 1;
+        break;
+      case 5:
+        this.rotate();
         break;
     }
     return 1;
   }
-  checkCollision(pos) {
+  checkCollision(pos, blocks = this.blocks, dimensions = this.dimensions) {
     // they will give us an position
     // if we either cross the boundary
     // or we cross any pre occupied block, we will return true
@@ -200,13 +213,13 @@ class Block {
     // pos is pos.x and pos.yc
     if (
       pos.x < 0 ||
-      pos.x + this.dimensions[0] > WIDTH.game ||
-      pos.y + this.dimensions[1] > HEIGHT.game
+      pos.x + dimensions[0] > WIDTH.game ||
+      pos.y + dimensions[1] > HEIGHT.game
     )
       return true;
-    for (const i of this.blocks) {
-      let y = pos.y + Math.floor(i / 4);
-      let x = pos.x + (i % 4);
+    for (const i of blocks) {
+      let y = pos.y + Math.floor(i / IMAGINARY_MATRIX);
+      let x = pos.x + (i % IMAGINARY_MATRIX);
       if (y < 0) continue;
       if (GAME_BOARD[y][x] != -1) return true;
     }
@@ -216,11 +229,68 @@ class Block {
     this.locked = true;
     for (const i of this.blocks) {
       // we will use i along with its position and put it in the game board
-      let y = this.pos.y + Math.floor(i / 4);
-      let x = this.pos.x + (i % 4);
+      let y = this.pos.y + Math.floor(i / IMAGINARY_MATRIX);
+      let x = this.pos.x + (i % IMAGINARY_MATRIX);
       if (y < 0) continue;
       GAME_BOARD[y][x] = this.number;
       // added
+    }
+  }
+  rotate() {
+    // i think its gonna be the hardest part to implement here tbh
+    // hmm, if i think of it in a way that we are in
+    // we know that
+    // if we rotate anything by 90 degree,
+    // the new row is just the old col
+    // and the new col is N-1-row
+    // here N is the imaginary size of the matrix i was taking
+    // which in our case if 4 since i am doing all the calculations using 4 here
+    // so, let's perform the rotations for our cute little stuff
+    // and then we can shift the origin to ensure they are at top left most part
+    // so that it will be easier for us to do anything with them
+
+    //process ->
+    // we will simply convert these indices to row and col
+    // we will apply the transformation to get our new row and col
+    // we will then shift their origin to ensure they are at top left most
+    // we will then again convert them into indices
+    // we will check for collision, if there is any
+    // if there is, then we will cancel the operation
+    // if there is none, we will just change our blocks to the new blocks
+
+    let newBlocks = [];
+    let minRow = IMAGINARY_MATRIX;
+    let minCol = IMAGINARY_MATRIX;
+    for (let i of this.blocks) {
+      // now i is our index of the block
+      let row = Math.floor(i / IMAGINARY_MATRIX);
+      let col = i % IMAGINARY_MATRIX;
+
+      let newRow = col;
+      let newCol = IMAGINARY_MATRIX - 1 - row;
+
+      minRow = Math.min(newRow, minRow);
+      minCol = Math.min(newCol, minCol);
+      newBlocks.push([newRow, newCol]);
+    }
+    // we got our new array but its not shifted yet
+    // we will shift it by the minRow and the minCol number
+    for (let i = 0; i < newBlocks.length; i++) {
+      newBlocks[i][0] -= minRow;
+      newBlocks[i][1] -= minCol;
+    }
+    // now we got our shifted stuff=
+    // now we can convert it to indices
+    for (let i = 0; i < newBlocks.length; i++) {
+      newBlocks[i] = newBlocks[i][0] * IMAGINARY_MATRIX + newBlocks[i][1];
+    }
+    // now we got our indices, let's check if it collides or not
+    // we need to also inverse the dimensions now
+    let newDimensions = [this.dimensions[1],this.dimensions[0]]
+    if (!this.checkCollision(this.pos, newBlocks, newDimensions)) {
+      MOVE_SOUND.play();
+      this.blocks = newBlocks;
+      this.dimensions = newDimensions
     }
   }
 }
@@ -332,7 +402,7 @@ function clearLines() {
   // those lines and push the array downwards
   // we will also make sure we keep track of how many lines are being
   // cleared at once and so we will increase the point accordingly
-    let total = 0
+  let total = 0;
   for (let row = 0; row < HEIGHT.game; row++) {
     let isCleared = true;
     for (let col = 0; col < WIDTH.game; col++) {
@@ -344,20 +414,19 @@ function clearLines() {
     }
     // now we know whether this one is good or not
     // we can easily remove this if its cleared and append a new array in our board game
-    if (isCleared){
-        total++;
-        GAME_BOARD.splice(row,1); // this row is removed now
-        GAME_BOARD.unshift(Array.from({ length: WIDTH.game }, () => -1));
+    if (isCleared) {
+      total++;
+      GAME_BOARD.splice(row, 1); // this row is removed now
+      GAME_BOARD.unshift(Array.from({ length: WIDTH.game }, () => -1));
     }
   }
-  SCORE += total * 1000
-  if (total>0){
-    LINE_CLEAR_SOUND.play()
+  SCORE += total * 1000;
+  if (total > 0) {
+    LINE_CLEAR_SOUND.play();
   }
 }
 
 function gameOver() {
-  console.log("Game Over");
   HOLDING_BLOCK = null;
   NEXT_BLOCK = null;
   IS_GAME_OVER = true;
@@ -396,6 +465,9 @@ function handleInput(e) {
       break;
     case "ArrowLeft":
       update(4);
+      break;
+    case " ":
+      update(5);
       break;
   }
 }
