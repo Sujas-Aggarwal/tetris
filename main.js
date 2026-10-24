@@ -23,7 +23,6 @@ const scoreWindow = document.getElementById("score-window");
 const previewCtx = previewWindow.getContext("2d");
 
 const scoreDiv = document.getElementsByClassName("game-score-box")[0];
-const GAME_OVER_SOUND = new Audio("assets/sounds/game-over.mp3")
 
 let IS_GAME_OVER = false;
 
@@ -83,9 +82,14 @@ const DIMENSIONS = [
 const MOVE_SOUND = new Audio("assets/sounds/move.wav");
 MOVE_SOUND.volume = 0.2;
 
+const LINE_CLEAR_SOUND = new Audio("assets/sounds/clear.wav");
+
 const BG_MUSIC = new Audio("assets/sounds/bg.mp3");
 BG_MUSIC.volume = 0.02;
 BG_MUSIC.loop = true;
+
+const GAME_OVER_SOUND = new Audio("assets/sounds/game-over.mp3");
+GAME_OVER_SOUND.volume = 0.6;
 
 const soundControl = document.getElementById("sound-control");
 const speedControl = document.getElementById("speed-control");
@@ -319,6 +323,37 @@ function update(movement_direction = 3, isDefault = true) {
   if (HOLDING_BLOCK.locked) {
     setupBlocks();
   }
+  // we also need to check the state of our
+  clearLines();
+}
+
+function clearLines() {
+  // basically we will check which lines are full and we will remove
+  // those lines and push the array downwards
+  // we will also make sure we keep track of how many lines are being
+  // cleared at once and so we will increase the point accordingly
+    let total = 0
+  for (let row = 0; row < HEIGHT.game; row++) {
+    let isCleared = true;
+    for (let col = 0; col < WIDTH.game; col++) {
+      // we got both row and col now
+      if (GAME_BOARD[row][col] == -1) {
+        isCleared = false;
+        break;
+      }
+    }
+    // now we know whether this one is good or not
+    // we can easily remove this if its cleared and append a new array in our board game
+    if (isCleared){
+        total++;
+        GAME_BOARD.splice(row,1); // this row is removed now
+        GAME_BOARD.unshift(Array.from({ length: WIDTH.game }, () => -1));
+    }
+  }
+  SCORE += total * 1000
+  if (total>0){
+    LINE_CLEAR_SOUND.play()
+  }
 }
 
 function gameOver() {
@@ -326,7 +361,7 @@ function gameOver() {
   HOLDING_BLOCK = null;
   NEXT_BLOCK = null;
   IS_GAME_OVER = true;
-  GAME_OVER_SOUND.play()
+  GAME_OVER_SOUND.play();
   draw();
 }
 
